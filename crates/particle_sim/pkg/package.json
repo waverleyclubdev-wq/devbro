@@ -1,0 +1,15 @@
+{
+  "name": "particle_sim",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "particle_sim_bg.wasm",
+    "particle_sim.js",
+    "particle_sim.d.ts"
+  ],
+  "main": "particle_sim.js",
+  "types": "particle_sim.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
