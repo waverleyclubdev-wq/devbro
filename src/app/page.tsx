@@ -18,17 +18,17 @@ type TerminalMode = 'SHELL' | 'EMAIL_FROM' | 'EMAIL_COMPOSE';
 const MANUAL_PAGES = [
   { 
     title: "01 // THE STACK", 
-    content: "Next.js frontend powered by a RUST. Compiled into Wasm. Runs native-speed calculations in your browser.", 
+    content: "Next.js frontend powered by RUST. Compiled into Wasm. Runs native-speed calculations in your browser.", 
     icon: "⚙️" 
   },
   { 
     title: "02 // HIGH DENSITY", 
-    content: "Particles count = 7,000. JavaScript chokes around 500. Rust eats this for breakfast.", 
+    content: "Particles count = 7,000. JavaScript chokes around 500. RUST eats this for breakfast.", 
     icon: "🌌" 
   },
   { 
     title: "03 // DISTRIBUTED COMPUTING", 
-    content: "Using your GPU / CPU to render. Saves me server costs and warms up your lap. You're welcome.", 
+    content: "Using your GPU / CPU to render because it saves me server costs, and warms up your lap. You're welcome.", 
     icon: "🔥" 
   },
   { 
@@ -392,7 +392,7 @@ export default function Home() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <div className="relative w-full max-w-lg bg-black/90 border border-emerald-500 rounded-lg shadow-2xl overflow-hidden">
                   <div className="bg-emerald-900 bg-opacity-20 border-b border-emerald-500/50 p-4 flex justify-between items-center">
-                      <span className="text-emerald-400 font-bold tracking-widest text-xs">[ SYSTEM_MANUAL.md ]</span>
+                      <span className="text-emerald-400 font-bold tracking-widest text-xs">[ READ_ME_MD ]</span>
                       <button onClick={() => setManualOpen(false)} className="text-white">✕</button>
                   </div>
                   <div className="p-8 min-h-[300px] flex flex-col justify-between">
