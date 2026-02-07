@@ -29,12 +29,6 @@ export class Engine {
         return Engine.__wrap(ret);
     }
     /**
-     * @param {number} val
-     */
-    set_mode(val) {
-        wasm.engine_set_mode(this.__wbg_ptr, val);
-    }
-    /**
      * @returns {number}
      */
     tick() {

@@ -6,7 +6,6 @@ export class Engine {
     free(): void;
     [Symbol.dispose](): void;
     static new(width: number, height: number, count: number): Engine;
-    set_mode(val: number): void;
     tick(): number;
     update_mouse(x: number, y: number): void;
 }
@@ -17,7 +16,6 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_engine_free: (a: number, b: number) => void;
     readonly engine_new: (a: number, b: number, c: number) => number;
-    readonly engine_set_mode: (a: number, b: number) => void;
     readonly engine_tick: (a: number) => number;
     readonly engine_update_mouse: (a: number, b: number, c: number) => void;
     readonly __wbindgen_externrefs: WebAssembly.Table;
