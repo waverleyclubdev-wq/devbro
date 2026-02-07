@@ -4,7 +4,7 @@ import { Providers } from "./providers"; // <--- Import the provider we made
 
 export const metadata: Metadata = {
   title: "DevBro",
-  description: "Engineering Flex",
+  description: "I Write Code",
 };
 
 export default function RootLayout({

@@ -23,7 +23,7 @@ const MANUAL_PAGES = [
   },
   { 
     title: "02 // HIGH DENSITY", 
-    content: "Particles count = 7,000. JavaScript chokes around 500. RUST eats this for breakfast.", 
+    content: "Particles count = 7,000. JavaScript chokes around 500. RUST eats it for breakfast.", 
     icon: "🌌" 
   },
   { 
@@ -244,7 +244,7 @@ export default function Home() {
 
                 // Show final result based on the flag
                 setTimeout(() => {
-                        if(transmissionSuccess) addLog(">> TRANSMISSION SENT :)");
+                        if(transmissionSuccess) addLog(">> TRANSMISSION SENT");
                         else { addLog(">> ERROR: CARRIER LOST"); addLog(">> CHECK CONFIGURATION"); }
                 }, 500);
 
