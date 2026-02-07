@@ -28,7 +28,7 @@ const MANUAL_PAGES = [
   },
   { 
     title: "03 // DISTRIBUTED COMPUTING", 
-    content: "Using your GPU / CPU to render because it saves me server costs, and warms up your lap. You're welcome.", 
+    content: "Using your GPU / CPU to render because it saves me server costs, and warms up your lap or hands. You're welcome.", 
     icon: "🔥" 
   },
   { 
