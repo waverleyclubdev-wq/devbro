@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import emailjs from '@emailjs/browser';
 
-// --- CONFIGURATION ---
+// --- CONFIGURATION (Clean & Secure) ---
 const EMAIL_SERVICE_ID = process.env.NEXT_PUBLIC_EMAIL_SERVICE_ID!;
 const EMAIL_TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAIL_TEMPLATE_ID!;
 const EMAIL_PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAIL_PUBLIC_KEY!;
@@ -46,7 +46,6 @@ const isValidEmail = (email: string) => {
 const filterProfanity = (text: string) => {
   let clean = text;
   BAD_WORDS.forEach(word => {
-     // Regex to find the word (case insensitive, whole word)
      const regex = new RegExp(`\\b${word}\\b`, 'gi');
      clean = clean.replace(regex, "🤬");
   });
@@ -231,11 +230,10 @@ export default function Home() {
         const newHistory = [...terminalHistory, `root@devbro:~$ ${val}`];
         const cmd = val.toLowerCase();
         switch (cmd) {
-            // case 'help': newHistory.push("COMMANDS: sendmail, overclock, normal, clear, rm -rf /"); break;
-            case 'help': newHistory.push("COMMANDS: sendmail"); break;
-            // case 'normal': setIsOverclocked(false); newHistory.push(">> SYSTEMS NORMALIZED."); break;
-            // case 'overclock': setIsOverclocked(true); newHistory.push(">> CLOCK SPEED INCREASED."); break;
-            // case 'clear': setTerminalHistory([]); setInputVal(""); return;
+            case 'help': newHistory.push("COMMANDS: sendmail, overclock, normal, clear, rm -rf /"); break;
+            case 'normal': setIsOverclocked(false); newHistory.push(">> SYSTEMS NORMALIZED."); break;
+            case 'overclock': setIsOverclocked(true); newHistory.push(">> CLOCK SPEED INCREASED."); break;
+            case 'clear': setTerminalHistory([]); setInputVal(""); return;
             case 'sendmail': 
                 setTerminalMode('EMAIL_FROM');
                 newHistory.push(">> LAUNCHING MAIL PROTOCOL v1.0");
