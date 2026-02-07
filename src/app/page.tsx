@@ -33,7 +33,7 @@ const MANUAL_PAGES = [
   },
   { 
     title: "04 // CONTACT", 
-    content: "Transmission channel open. Need a website that defies physics? I am available for commissions. Send a signal to my inbox via the terminal (~).", 
+    content: "Transmission channel open. Need a website that defies physics? I am available for commissions. Send a signal to my inbox via the terminal. (Press '~' or tap the [ >_ ] button).",
     icon: "📡" 
   }
 ];
@@ -50,6 +50,18 @@ const filterProfanity = (text: string) => {
      clean = clean.replace(regex, "🤬");
   });
   return clean;
+};
+
+// Helper to generate retro progress bar string
+const getProgressBar = (percent: number) => {
+    const width = 20; // Total width of bar in characters
+    const filledCount = Math.round((percent / 100) * width);
+    const emptyCount = width - filledCount;
+    // Using block characters for retro feel
+    const bar = '█'.repeat(filledCount) + '░'.repeat(emptyCount);
+    // Pad percentage to ensure stable width (e.g. " 5%" vs "100%")
+    const percentStr = percent.toString().padStart(3, ' ');
+    return `>> ${bar} ${percentStr}%`;
 };
 
 // --- EXPLODING TEXT COMPONENT ---
@@ -175,6 +187,7 @@ export default function Home() {
   // --- THE 15s MODEM SEQUENCE ---
   const startTransmission = async () => {
       setIsTransmitting(true);
+      let transmissionSuccess = false;
       
       try {
         const audio = new Audio('/modem.mp3');
@@ -182,43 +195,73 @@ export default function Home() {
         audio.play();
       } catch (e) { console.log("Audio blocked"); }
 
-      const addLog = (text: string) => {
-          setTerminalHistory(prev => [...prev, text]);
-          setTimeout(() => {
-             const body = document.getElementById('terminal-body'); 
-             if(body) body.scrollTop = body.scrollHeight;
-          }, 10);
+      // Helper to auto-scroll terminal
+      const scrollTerminal = () => {
+         setTimeout(() => { const body = document.getElementById('terminal-body'); if(body) body.scrollTop = body.scrollHeight; }, 10);
       };
 
+      // Helper to add a new line
+      const addLog = (text: string) => {
+          setTerminalHistory(prev => [...prev, text]);
+          scrollTerminal();
+      };
+
+       // Helper to update the very last line (for progress bar animation)
+       const updateLastLog = (text: string) => {
+        setTerminalHistory(prev => {
+            const newHistory = [...prev];
+            newHistory[newHistory.length - 1] = text;
+            return newHistory;
+        });
+        scrollTerminal();
+    };
+
+      // --- Timeline Sequence ---
       addLog(">> DIALING");
-      setTimeout(() => addLog(">> CONNECTING..."), 2500); ``
+      setTimeout(() => addLog(">> CONNECTING..."), 2500); 
       setTimeout(() => addLog(">> HANDSHAKE: ACK_RECEIVED"), 14500);       
-      setTimeout(() => addLog(">> UPLOADING PACKET..."), 16000);
+      setTimeout(() => addLog(">> UPLOADING PACKET..."), 15000);
 
-      try {
-          await emailjs.send(
-              EMAIL_SERVICE_ID,
-              EMAIL_TEMPLATE_ID,
-              {
-                  user_email: emailDraft.from,
-                  message: emailDraft.body,
-              },
-              EMAIL_PUBLIC_KEY
-          );
-          setTimeout(() => addLog(">> 100% COMPLETE."), 17000);
-          setTimeout(() => addLog(">> MESSAGE SENT SUCCESSFULLY."), 18000);
-      } catch (error) {
-          setTimeout(() => addLog(">> ERROR: CARRIER LOST."), 17000);
-          setTimeout(() => addLog(">> CHECK CONFIGURATION."), 18000);
-          console.error(error);
-      }
+      // Send email in background immediately
+      emailjs.send( EMAIL_SERVICE_ID, EMAIL_TEMPLATE_ID, { user_email: emailDraft.from, message: emailDraft.body, }, EMAIL_PUBLIC_KEY )
+        .then(() => { transmissionSuccess = true; })
+        .catch((error) => { console.error(error); transmissionSuccess = false; });
 
+
+      // --- Progress Bar Animation Sequence (starts at 16s) ---
+      setTimeout(() => {
+        let percent = 0;
+        // Add initial empty bar line
+        addLog(getProgressBar(0));
+
+        const interval = setInterval(() => {
+            percent += 2; // Increment speed
+            if (percent >= 100) {
+                percent = 100;
+                clearInterval(interval);
+                // Ensure final state is set
+                updateLastLog(getProgressBar(100));
+
+                // Show final result based on the flag
+                setTimeout(() => {
+                        if(transmissionSuccess) addLog(">> TRANSMISSION SENT :)");
+                        else { addLog(">> ERROR: CARRIER LOST"); addLog(">> CHECK CONFIGURATION"); }
+                }, 500);
+
+            } else {
+                // Update existing bar line
+                updateLastLog(getProgressBar(percent));
+            }
+        }, 50); // Update frequency (50ms * 50 steps = 2.5s duration)
+    }, 16000);
+
+      // --- Reset Terminal (at 23s) ---
       setTimeout(() => {
           setTerminalMode('SHELL');
           setEmailDraft({ from: '', body: '' });
           setIsTransmitting(false);
-          setTerminalHistory(prev => [...prev, "", "root@devbro:~$ _"]);
-      }, 18000);
+          // setTerminalHistory(prev => [...prev, "", "root@devbro:~$ _"]);
+      }, 23000);
   };
 
   const handleCommand = (e: React.FormEvent) => {
@@ -230,10 +273,11 @@ export default function Home() {
         const newHistory = [...terminalHistory, `root@devbro:~$ ${val}`];
         const cmd = val.toLowerCase();
         switch (cmd) {
-            case 'help': newHistory.push("COMMANDS: sendmail, overclock, normal, clear, rm -rf /"); break;
-            case 'normal': setIsOverclocked(false); newHistory.push(">> SYSTEMS NORMALIZED."); break;
-            case 'overclock': setIsOverclocked(true); newHistory.push(">> CLOCK SPEED INCREASED."); break;
-            case 'clear': setTerminalHistory([]); setInputVal(""); return;
+           case 'help': newHistory.push("COMMANDS: sendmail"); break;
+            // case 'help': newHistory.push("COMMANDS: sendmail, overclock, normal, clear, rm -rf /"); break;
+            // case 'normal': setIsOverclocked(false); newHistory.push(">> SYSTEMS NORMALIZED."); break;
+            // case 'overclock': setIsOverclocked(true); newHistory.push(">> CLOCK SPEED INCREASED."); break;
+            // case 'clear': setTerminalHistory([]); setInputVal(""); return;
             case 'sendmail': 
                 setTerminalMode('EMAIL_FROM');
                 newHistory.push(">> LAUNCHING MAIL PROTOCOL v1.0");
@@ -277,7 +321,7 @@ export default function Home() {
       <canvas ref={canvasRef} width={1920} height={1080} className="absolute inset-0 z-0 opacity-40 pointer-events-none" />
 
       {/* TERMINAL */}
-      <div className={`fixed top-0 left-0 w-full bg-neutral-900/95 border-b-2 border-emerald-500 z-50 transition-all duration-300 ease-out shadow-2xl ${isTerminalOpen ? 'h-[70vh]' : 'h-0 overflow-hidden'}`}>
+      <div className={`fixed top-0 left-0 w-full bg-neutral-900/95 border-b-2 border-emerald-500 z-50 transition-all duration-300 ease-out shadow-2xl ${isTerminalOpen ? 'h-[60vh]' : 'h-0 overflow-hidden'}`}>
         <div id="terminal-body" className="h-full p-6 overflow-y-auto font-mono text-sm relative">
             
             {/* HISTORY LOGS */}
@@ -332,6 +376,9 @@ export default function Home() {
                         onChange={(e) => setInputVal(e.target.value)} 
                         className="bg-transparent outline-none flex-1 text-emerald-300 placeholder-emerald-800" 
                         autoFocus 
+                        autoComplete="off"
+                        autoCapitalize="none"
+                        spellCheck="false"
                         placeholder={terminalMode === 'EMAIL_FROM' ? 'user@example.com' : ''}
                     />
                 </form>
@@ -405,17 +452,23 @@ export default function Home() {
             on weekends.. ✨
         </motion.p>       
 
-        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
-           <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-md text-sm text-neutral-300"><span className="text-emerald-500 mr-2">$</span> Rust / Wasm</div>
-           <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-md text-sm text-neutral-300"><span className="text-emerald-500 mr-2">$</span> Next.js / React</div>
-           <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-md text-sm text-neutral-300"><span className="text-emerald-500 mr-2">$</span> WebGL / Canvas</div>
-           <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-md text-sm text-neutral-300"><span className="text-emerald-500 mr-2">$</span> TailWind</div>
-        </div> */}
-
         <button onClick={() => setManualOpen(true)} className="mt-8 md:hidden px-6 py-2 border border-emerald-500 text-emerald-500 rounded uppercase text-xs tracking-widest">OPEN SYSTEM MANUAL</button>
+
+        {/* MOBILE TERMINAL TOGGLE (CENTERED UNDERNEATH MANUAL BUTTON) */}
+        <button 
+          onClick={() => {
+            setTerminalOpen(prev => !prev);
+            setTimeout(() => terminalInputRef.current?.focus(), 100);
+          }}
+          className="mt-4 md:hidden px-3 py-2 bg-black/50 border border-emerald-500/50 text-emerald-500/80 rounded uppercase text-xs tracking-widest hover:bg-emerald-500 hover:text-black transition-colors"
+        >
+          {isTerminalOpen ? "CLOSE TERMINAL" : "OPEN TERMINAL [ >_ ]"}
+        </button>
       </div>
       
-      <div className="absolute bottom-6 w-full text-center text-neutral-600 text-[10px] uppercase tracking-widest">HAVE A GOOD ONE • [ DEVBRO ]</div>
+      <div className="absolute bottom-6 w-full text-center text-neutral-600 text-[10px] uppercase tracking-widest pointer-events-none">HAVE A GOOD ONE • [ DEVBRO ]</div>
     </main>
   );
 }
+
+
