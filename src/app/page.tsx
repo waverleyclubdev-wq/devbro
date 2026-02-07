@@ -18,22 +18,22 @@ type TerminalMode = 'SHELL' | 'EMAIL_FROM' | 'EMAIL_COMPOSE';
 const MANUAL_PAGES = [
   { 
     title: "01 // THE STACK", 
-    content: "You are looking at a Next.js frontend powered by a RUST physics engine. I compiled Rust code into WebAssembly (Wasm) to run native-speed calculations inside your browser.", 
+    content: "Next.js frontend powered by a RUST. Compiled into Wasm. Runs native-speed calculations in your browser.", 
     icon: "⚙️" 
   },
   { 
     title: "02 // HIGH DENSITY", 
-    content: "Particles count = 7,000. JavaScript usually chokes around 500. Rust eats this for breakfast.", 
+    content: "Particles count = 7,000. JavaScript chokes around 500. Rust eats this for breakfast.", 
     icon: "🌌" 
   },
   { 
     title: "03 // DISTRIBUTED COMPUTING", 
-    content: "I am using your GPU and CPU to render this. It saves me server costs and warms up your room. You're welcome.", 
+    content: "Using your GPU / CPU to render. Saves me server costs and warms up your lap. You're welcome.", 
     icon: "🔥" 
   },
   { 
-    title: "04 // CONTACT", 
-    content: "Transmission channel open. Need a website that defies physics? I am available for commissions. Send a signal to my inbox via the terminal. (Press '~' or tap the [ >_ ] button).",
+    title: "04 // PING", 
+    content: "Need something coded?. Send a transmission via the terminal. (Press '~' or tap the [ >_ ] button).",
     icon: "📡" 
   }
 ];
@@ -462,7 +462,7 @@ export default function Home() {
           }}
           className="mt-4 md:hidden px-3 py-2 bg-black/50 border border-emerald-500/50 text-emerald-500/80 rounded uppercase text-xs tracking-widest hover:bg-emerald-500 hover:text-black transition-colors"
         >
-          {isTerminalOpen ? "CLOSE TERMINAL" : "OPEN TERMINAL [ >_ ]"}
+          {isTerminalOpen ? "[ X_ ]" : "[ >_ ]"}
         </button>
       </div>
       
