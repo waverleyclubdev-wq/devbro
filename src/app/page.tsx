@@ -1,7 +1,57 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
-import { trpc } from '@/utils/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
+import emailjs from '@emailjs/browser';
+
+// --- CONFIGURATION ---
+const EMAIL_SERVICE_ID = process.env.NEXT_PUBLIC_EMAIL_SERVICE_ID!;
+const EMAIL_TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAIL_TEMPLATE_ID!;
+const EMAIL_PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAIL_PUBLIC_KEY!;
+
+// --- PROFANITY FILTER LIST ---
+const BAD_WORDS = ["shit", "fuck", "damn", "bitch", "crap", "piss", "dick", "darn", "cock", "pussy", "ass", "asshole", "fag", "bastard", "slut", "douche", "wanker", "bullshit"];
+
+// --- TYPES ---
+type TerminalMode = 'SHELL' | 'EMAIL_FROM' | 'EMAIL_COMPOSE';
+
+// --- MANUAL CONTENT ---
+const MANUAL_PAGES = [
+  { 
+    title: "01 // THE STACK", 
+    content: "You are looking at a Next.js frontend powered by a RUST physics engine. I compiled Rust code into WebAssembly (Wasm) to run native-speed calculations inside your browser.", 
+    icon: "⚙️" 
+  },
+  { 
+    title: "02 // HIGH DENSITY", 
+    content: "Particles count = 7,000. JavaScript usually chokes around 500. Rust eats this for breakfast.", 
+    icon: "🌌" 
+  },
+  { 
+    title: "03 // DISTRIBUTED COMPUTING", 
+    content: "I am using your GPU and CPU to render this. It saves me server costs and warms up your room. You're welcome.", 
+    icon: "🔥" 
+  },
+  { 
+    title: "04 // CONTACT", 
+    content: "Transmission channel open. Need a website that defies physics? I am available for commissions. Send a signal to my inbox via the terminal (~).", 
+    icon: "📡" 
+  }
+];
+
+// --- HELPER FUNCTIONS ---
+const isValidEmail = (email: string) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+const filterProfanity = (text: string) => {
+  let clean = text;
+  BAD_WORDS.forEach(word => {
+     // Regex to find the word (case insensitive, whole word)
+     const regex = new RegExp(`\\b${word}\\b`, 'gi');
+     clean = clean.replace(regex, "🤬");
+  });
+  return clean;
+};
 
 // --- EXPLODING TEXT COMPONENT ---
 const ExplodingText = ({ text }: { text: string }) => {
@@ -27,27 +77,29 @@ const ExplodingText = ({ text }: { text: string }) => {
   );
 };
 
-// MANUAL CONTENT
-const MANUAL_PAGES = [
-  { title: "01 // THE STACK", content: "You are looking at a Next.js frontend powered by a RUST physics engine. I compiled Rust code into WebAssembly (Wasm) to run native-speed calculations inside your browser.", icon: "⚙️" },
-  { title: "02 // HIGH DENSITY", content: "Particles count = 5,000. JavaScript usually chokes around 500. Rust eats this for breakfast.", icon: "🌌" },
-  { title: "03 // DISTRIBUTED COMPUTING", content: "I am using your GPU and CPU to render this. It saves me server costs and warms up your room. You're welcome.", icon: "🔥" },
- ];
-
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // States
   const [fps, setFps] = useState(0);
   const [memoryUsage, setMemoryUsage] = useState("0 KB");
+  
+  // TERMINAL STATE
   const [isTerminalOpen, setTerminalOpen] = useState(false);
   const [terminalHistory, setTerminalHistory] = useState<string[]>(["DEVBRO KERNEL [v1.0.5]", "Type 'help' for commands.", ""]);
   const [inputVal, setInputVal] = useState("");
   const terminalInputRef = useRef<HTMLInputElement>(null);
+  const [terminalMode, setTerminalMode] = useState<TerminalMode>('SHELL');
+  
+  // EMAIL STATE
+  const [emailDraft, setEmailDraft] = useState({ from: '', body: '' });
+  const [isTransmitting, setIsTransmitting] = useState(false);
+  
+  // UI STATE
   const [isManualOpen, setManualOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   
-  // Engine Refs
+  // ENGINE STATE
   const engineRef = useRef<any>(null);
   const [isOverclocked, setIsOverclocked] = useState(false);
   const [isDestructing, setIsDestructing] = useState(false);
@@ -64,12 +116,9 @@ export default function Home() {
       try {
         const wasmModule = await import('particle-sim');
         const wasmInstance: any = await wasmModule.default();
-
-        // --- 7,000 PARTICLES ---
-        const particleCount = 5000; 
+        const particleCount = 7000; 
         const engine = wasmModule.Engine.new(window.innerWidth, window.innerHeight, particleCount);
         engineRef.current = engine;
-
         const ctx = canvasRef.current?.getContext('2d');
         const handleMouseMove = (e: MouseEvent) => engine.update_mouse(e.clientX, e.clientY);
         window.addEventListener('mousemove', handleMouseMove);
@@ -79,32 +128,23 @@ export default function Home() {
 
         const render = () => {
           if (isDestructing) return;
-          
           const iterations = isOverclocked ? 3 : 1;
           let ptr;
           for(let i=0; i<iterations; i++) ptr = engine.tick();
           
           const particles = new Float64Array(wasmInstance.memory.buffer, ptr, particleCount * 5);
-
           if (ctx) {
             ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-            
             for (let i = 0; i < particles.length; i += 5) {
               const x = particles[i];
               const y = particles[i + 1];
-
-              if (isOverclocked) {
-                 ctx.fillStyle = '#EF4444'; 
-              } else {
-                 ctx.fillStyle = '#10B981'; 
-              }
-
+              if (isOverclocked) ctx.fillStyle = '#EF4444'; 
+              else ctx.fillStyle = '#10B981'; 
               ctx.beginPath();
               ctx.rect(x, y, 1.5, 1.5); 
               ctx.fill();
             }
           }
-
           frameCount++;
           const now = performance.now();
           if (frameCount >= 30) {
@@ -121,8 +161,111 @@ export default function Home() {
       } catch (e) { console.error("Wasm Error:", e); }
     }
     startEngine();
-   
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '`' || e.key === '~') {
+        e.preventDefault();
+        setTerminalOpen(prev => !prev);
+        setTimeout(() => terminalInputRef.current?.focus(), 50);
+      }
+      if (e.key === 'Escape') setManualOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOverclocked, isDestructing]);
+
+  // --- THE 15s MODEM SEQUENCE ---
+  const startTransmission = async () => {
+      setIsTransmitting(true);
+      
+      try {
+        const audio = new Audio('/modem.mp3');
+        audio.volume = 0.5;
+        audio.play();
+      } catch (e) { console.log("Audio blocked"); }
+
+      const addLog = (text: string) => {
+          setTerminalHistory(prev => [...prev, text]);
+          setTimeout(() => {
+             const body = document.getElementById('terminal-body'); 
+             if(body) body.scrollTop = body.scrollHeight;
+          }, 10);
+      };
+
+      addLog(">> DIALING");
+      setTimeout(() => addLog(">> CONNECTING..."), 2500); ``
+      setTimeout(() => addLog(">> HANDSHAKE: ACK_RECEIVED"), 14500);       
+      setTimeout(() => addLog(">> UPLOADING PACKET..."), 16000);
+
+      try {
+          await emailjs.send(
+              EMAIL_SERVICE_ID,
+              EMAIL_TEMPLATE_ID,
+              {
+                  user_email: emailDraft.from,
+                  message: emailDraft.body,
+              },
+              EMAIL_PUBLIC_KEY
+          );
+          setTimeout(() => addLog(">> 100% COMPLETE."), 17000);
+          setTimeout(() => addLog(">> MESSAGE SENT SUCCESSFULLY."), 18000);
+      } catch (error) {
+          setTimeout(() => addLog(">> ERROR: CARRIER LOST."), 17000);
+          setTimeout(() => addLog(">> CHECK CONFIGURATION."), 18000);
+          console.error(error);
+      }
+
+      setTimeout(() => {
+          setTerminalMode('SHELL');
+          setEmailDraft({ from: '', body: '' });
+          setIsTransmitting(false);
+          setTerminalHistory(prev => [...prev, "", "root@devbro:~$ _"]);
+      }, 18000);
+  };
+
+  const handleCommand = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = inputVal.trim();
+    
+    // 1. SHELL MODE
+    if (terminalMode === 'SHELL') {
+        const newHistory = [...terminalHistory, `root@devbro:~$ ${val}`];
+        const cmd = val.toLowerCase();
+        switch (cmd) {
+            // case 'help': newHistory.push("COMMANDS: sendmail, overclock, normal, clear, rm -rf /"); break;
+            case 'help': newHistory.push("COMMANDS: sendmail"); break;
+            // case 'normal': setIsOverclocked(false); newHistory.push(">> SYSTEMS NORMALIZED."); break;
+            // case 'overclock': setIsOverclocked(true); newHistory.push(">> CLOCK SPEED INCREASED."); break;
+            // case 'clear': setTerminalHistory([]); setInputVal(""); return;
+            case 'sendmail': 
+                setTerminalMode('EMAIL_FROM');
+                newHistory.push(">> LAUNCHING MAIL PROTOCOL v1.0");
+                newHistory.push(">> ENTER YOUR EMAIL (FOR REPLY):");
+                break;
+            case 'rm -rf /': setIsDestructing(true); setTimeout(() => window.location.reload(), 3000); break;
+            default: if(val) newHistory.push(`Unknown command: ${cmd}`);
+        }
+        setTerminalHistory(newHistory);
+        setInputVal("");
+    } 
+    // 2. EMAIL VALIDATION STEP
+    else if (terminalMode === 'EMAIL_FROM') {
+        const history = [...terminalHistory, `${val}`];
+        
+        if (!isValidEmail(val)) {
+             history.push(">> ERROR: INVALID_EMAIL_FORMAT. RETRY:");
+             setTerminalHistory(history);
+             setInputVal("");
+        } else {
+             history.push(">> ADDRESS VERIFIED.");
+             setTerminalHistory(history);
+             setEmailDraft(prev => ({ ...prev, from: val }));
+             setTerminalMode('EMAIL_COMPOSE');
+             setInputVal("");
+        }
+    }
+
+    setTimeout(() => { const body = document.getElementById('terminal-body'); if(body) body.scrollTop = body.scrollHeight; }, 10);
+  };
 
   if (isDestructing) return <div className="h-screen w-full bg-blue-900 text-white font-mono flex items-center justify-center flex-col p-10"><h1 className="text-4xl mb-4">:(</h1><p>CRITICAL_PROCESS_DIED</p></div>;
 
@@ -134,6 +277,69 @@ export default function Home() {
       `}</style>
 
       <canvas ref={canvasRef} width={1920} height={1080} className="absolute inset-0 z-0 opacity-40 pointer-events-none" />
+
+      {/* TERMINAL */}
+      <div className={`fixed top-0 left-0 w-full bg-neutral-900/95 border-b-2 border-emerald-500 z-50 transition-all duration-300 ease-out shadow-2xl ${isTerminalOpen ? 'h-[70vh]' : 'h-0 overflow-hidden'}`}>
+        <div id="terminal-body" className="h-full p-6 overflow-y-auto font-mono text-sm relative">
+            
+            {/* HISTORY LOGS */}
+            {terminalHistory.map((line, i) => (
+                <div key={i} className={`${line.startsWith(">>") ? "text-emerald-500" : isOverclocked ? "text-red-400" : "text-emerald-300/80"} mb-1 whitespace-pre-wrap`}>
+                    {line}
+                </div>
+            ))}
+
+            {/* COMPOSE MESSAGE BOX (With Profanity Filter) */}
+            {terminalMode === 'EMAIL_COMPOSE' && !isTransmitting && (
+                <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="border border-emerald-500/50 p-2 bg-emerald-900/10 relative group hover:border-emerald-400 transition-colors">
+                        <div className="absolute -top-3 left-4 bg-[#0a0a0a] px-2 text-[10px] text-emerald-500 font-bold tracking-widest border border-emerald-500/50">
+                            MESSAGE_BUFFER.TXT
+                        </div>
+                        <textarea
+                            autoFocus
+                            value={emailDraft.body}
+                            onChange={(e) => {
+                                const cleanText = filterProfanity(e.target.value);
+                                setEmailDraft(prev => ({ ...prev, body: cleanText }));
+                            }}
+                            className="w-full h-32 bg-transparent text-emerald-300 font-mono outline-none resize-none placeholder-emerald-800/50 p-2"
+                            placeholder="> TYPE YOUR ENCRYPTED MESSAGE HERE..."
+                        />
+                    </div>
+                    
+                    <div className="mt-4 flex justify-end">
+                        <button 
+                            onClick={startTransmission}
+                            disabled={!emailDraft.body.trim()}
+                            className="group relative px-6 py-2 bg-emerald-900/50 border border-emerald-500 text-emerald-400 font-bold tracking-widest hover:bg-emerald-500 hover:text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            [ INITIATE_UPLINK ]
+                            <div className="absolute inset-0 border border-emerald-500 blur-[2px] opacity-50 group-hover:opacity-100" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* SINGLE LINE INPUT (Hidden during compose/transmit) */}
+            {terminalMode !== 'EMAIL_COMPOSE' && !isTransmitting && (
+                <form onSubmit={handleCommand} className="flex gap-2 mt-2">
+                    <span className="text-emerald-400 font-bold">
+                        {terminalMode === 'SHELL' ? 'root@devbro:~$' : 'FROM:'}
+                    </span>
+                    <input 
+                        ref={terminalInputRef} 
+                        type="text" 
+                        value={inputVal} 
+                        onChange={(e) => setInputVal(e.target.value)} 
+                        className="bg-transparent outline-none flex-1 text-emerald-300 placeholder-emerald-800" 
+                        autoFocus 
+                        placeholder={terminalMode === 'EMAIL_FROM' ? 'user@example.com' : ''}
+                    />
+                </form>
+            )}
+        </div>
+      </div>
 
       {/* MANUAL MODAL */}
       <AnimatePresence>
@@ -170,7 +376,7 @@ export default function Home() {
           <div className="space-y-1 font-mono text-white/80">
             <div className="flex justify-between gap-8"><span>FPS:</span> <span className="text-white">{fps}</span></div>
             <div className="flex justify-between gap-8"><span>RAM:</span> <span className="text-white">{memoryUsage}</span></div>
-            <div className="flex justify-between gap-8"><span>PARTICLES:</span> <span className="text-emerald-400">5,000</span></div>
+            <div className="flex justify-between gap-8"><span>PARTICLES:</span> <span className="text-emerald-400">7,000</span></div>
             <div className="pt-2 mt-2 border-t border-white/10 text-center">
                 <button onClick={() => setManualOpen(true)} className="w-full py-1 border border-emerald-500/50 rounded uppercase text-[10px] tracking-widest text-emerald-400 hover:bg-emerald-500/10">[ READ_ME.md ]</button>
             </div>
@@ -200,6 +406,13 @@ export default function Home() {
         >
             on weekends.. ✨
         </motion.p>       
+
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
+           <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-md text-sm text-neutral-300"><span className="text-emerald-500 mr-2">$</span> Rust / Wasm</div>
+           <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-md text-sm text-neutral-300"><span className="text-emerald-500 mr-2">$</span> Next.js / React</div>
+           <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-md text-sm text-neutral-300"><span className="text-emerald-500 mr-2">$</span> WebGL / Canvas</div>
+           <div className="px-4 py-3 bg-white/5 border border-white/5 rounded-md text-sm text-neutral-300"><span className="text-emerald-500 mr-2">$</span> TailWind</div>
+        </div> */}
 
         <button onClick={() => setManualOpen(true)} className="mt-8 md:hidden px-6 py-2 border border-emerald-500 text-emerald-500 rounded uppercase text-xs tracking-widest">OPEN SYSTEM MANUAL</button>
       </div>
