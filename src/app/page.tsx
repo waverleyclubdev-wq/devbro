@@ -23,7 +23,7 @@ const MANUAL_PAGES = [
   },
   {
     title: "02 // HIGH DENSITY",
-    content: "Particles count = 7,000. JavaScript chokes around 500. RUST eats it for breakfast.",
+    content: "Particles count = 10,000. JavaScript chokes around 500. RUST eats it for breakfast.",
     icon: "🌌"
   },
   {
@@ -127,7 +127,7 @@ export default function Home() {
       try {
         const wasmModule = await import('particle-sim');
         const wasmInstance: any = await wasmModule.default();
-        const particleCount = 7000;
+        const particleCount = 10000;
         const engine = wasmModule.Engine.new(window.innerWidth, window.innerHeight, particleCount);
         engineRef.current = engine;
         const ctx = canvasRef.current?.getContext('2d');
@@ -421,7 +421,7 @@ export default function Home() {
           <div className="space-y-1 font-mono text-white/80">
             <div className="flex justify-between gap-8"><span>FPS:</span> <span className="text-white">{fps}</span></div>
             <div className="flex justify-between gap-8"><span>RAM:</span> <span className="text-white">{memoryUsage}</span></div>
-            <div className="flex justify-between gap-8"><span>PARTICLES:</span> <span className="text-emerald-400">7,000</span></div>
+            <div className="flex justify-between gap-8"><span>PARTICLES:</span> <span className="text-emerald-400">10,000</span></div>
             <div className="pt-2 mt-2 border-t border-white/10 text-center">
               <button onClick={() => setManualOpen(true)} className="w-full py-1 border border-emerald-500/50 rounded uppercase text-[10px] tracking-widest text-emerald-400 hover:bg-emerald-500/10">[ READ_ME.md ]</button>
             </div>
